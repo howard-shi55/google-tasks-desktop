@@ -1,88 +1,161 @@
-# Google Tasks Desktop
+# Google Tasks Desktop — Transparent Windows Fork
 
 [![Build Windows](https://github.com/howard-shi55/google-tasks-desktop/actions/workflows/build-windows.yml/badge.svg?branch=main)](https://github.com/howard-shi55/google-tasks-desktop/actions/workflows/build-windows.yml)
 
-This fork targets Windows x64 only.
+A **Windows x64 fork** of [shouryan01/google-tasks-desktop](https://github.com/shouryan01/google-tasks-desktop), maintained here by [howard-shi55](https://github.com/howard-shi55). It displays Google Tasks in a transparent, frameless window controlled from the system tray.
 
-Current version: **0.1.8**.
+The original project and its Tauri-based web wrapper are by **Shouryan Nikam**. This fork adds Windows desktop-widget behavior; it is an unofficial app and is not affiliated with Google.
 
-Version 0.1.8 disables WebView browser menus/shortcuts and restores the last normal window position and size.
+**Current release: [v0.1.8](https://github.com/howard-shi55/google-tasks-desktop/releases/tag/v0.1.8).**
 
-Version 0.1.7 promotes common tray actions to the top level, adds an optional **Start at login** checkbox, and hides the app's Windows taskbar button.
+## Screenshot
 
-Version 0.1.6 fixes theme and dragging injection after Google navigates from `/embed/` to `/embed/list/<id>`. Both the native URL guard and injected script accept these embed subroutes while excluding other origins and non-embed pages. It also fixes the drag permission: Tauri 2.0's Windows fetch IPC checks the origin without the page path, so the remote capability matches `https://tasks.google.com` rather than `/embed/*`. Only the start-dragging permission is granted to that origin; the script installs its handler only on embed pages.
+<img src="screenshot.png" alt="The transparent Google Tasks window with white text over a desktop wallpaper" width="760">
 
-## Build Windows with GitHub Actions
+Screenshot provided for this fork. The desktop wallpaper shows through the transparent task surface.
 
-You can build this fork without installing Rust, Visual Studio Build Tools, or the Windows SDK on your own computer. The GitHub-hosted Windows runner provides the native build tools, and the workflow installs Rust and Bun.
+## What changed from upstream?
 
-1. Commit and push `.github/workflows/build-windows.yml` to the repository's default branch. The workflow must exist on the default branch before GitHub offers the manual trigger.
-2. Open **Actions** in your fork. If GitHub asks you to enable workflows for the fork, enable them.
-3. Select **Build Windows**, click **Run workflow**, choose the branch to build, and confirm.
-4. When the run succeeds, open its summary and download **google-tasks-windows-x64** under **Artifacts**. Sign in to GitHub to download the ZIP.
-5. Extract the ZIP and use the `*-setup.exe` installer, or run the application executable from the extracted `release` directory. WebView2 Runtime is required to run the application.
+Compared with the upstream code inherited by this fork:
 
-Artifacts expire after 14 days; rerun the workflow to produce another download. Builds use the committed dependency lockfiles and stop if dependency installation, Rust checking, or compilation fails. No additional secrets, release creation, or code-signing certificate is required. The resulting Windows binaries are unsigned.
+| Area             | Inherited upstream behavior                    | This Windows fork                                                             |
+| ---------------- | ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| Builds           | macOS and Windows publishing workflow          | Windows x64 only                                                              |
+| Appearance       | Google Tasks' default web appearance           | Transparent surfaces, fixed white text and a subtle black text shadow         |
+| Window chrome    | Native title bar and File/Edit/Window menu bar | Frameless window with no in-window menu bar or taskbar button                 |
+| Controls         | Native window/menu controls                    | System-tray controls; drag empty space in the Tasks/My Tasks header           |
+| Closing          | Normal window close                            | Close to tray; explicit Quit to exit                                          |
+| Startup          | No tray startup toggle                         | Optional per-user Start at login checkbox                                     |
+| Window placement | No app-managed position/size restore           | Remembers the last normal window position and size                            |
+| Browser UI       | Default WebView browser behavior               | Browser context menus, DevTools, browser shortcuts and zoom controls disabled |
 
-**Build Windows** is the only build workflow and runs manually, not on push. The upstream multi-platform publishing workflow has been removed.
+Both projects use Google's web interface inside Tauri. This fork does not implement a separate task-sync backend or require a Google API key. The upstream macOS CPU/RAM comparisons are not benchmarks of this Windows fork.
 
-## Transparent Windows theme
+## Download and install
 
-The window/WebView background is transparent and frameless, without a native title bar, border, or in-window menu bar. After the Google Tasks embed page finishes loading, the app injects fixed white text with a subtle black shadow and transparent page surfaces. Menus, dialogs, listboxes, and tooltips keep a dark background for readability. Google sign-in pages are not themed. Transparency does not enable click-through.
+Requirements: **Windows 10/11 x64**, [Microsoft Edge WebView2 Runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/), and a Google account to use Tasks.
 
-Drag empty space in the **Tasks / My Tasks header strip** to move the window. The list dropdown and other interactive controls keep their normal clicks. The current layout uses the top 80 CSS pixels for this strip; if Google changes the header height, adjust the bound in `src-tauri/src/theme.js`. This is independent of the current list's name or language. Google sign-in pages do not get the drag handler; **Center** in the tray menu can reposition the window there.
+Get the files from **[Releases](https://github.com/howard-shi55/google-tasks-desktop/releases/latest)**:
 
-The app does not show a Windows taskbar button. Its Google Tasks icon stays in the system tray (possibly in the hidden-icons overflow). Left-click it to show/restore the window. Right-click it for:
+| File in v0.1.8                                                                                                                                             | Use                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [`Google-Tasks_0.1.8_x64-setup.exe`](https://github.com/howard-shi55/google-tasks-desktop/releases/download/v0.1.8/Google-Tasks_0.1.8_x64-setup.exe)       | Recommended installer                                      |
+| [`Google-Tasks_0.1.8_x64-portable.exe`](https://github.com/howard-shi55/google-tasks-desktop/releases/download/v0.1.8/Google-Tasks_0.1.8_x64-portable.exe) | Run without installing; keep it in a fixed folder          |
+| [`google-tasks-windows-x64-v0.1.8.zip`](https://github.com/howard-shi55/google-tasks-desktop/releases/download/v0.1.8/google-tasks-windows-x64-v0.1.8.zip) | Original CI bundle containing the executable and installer |
+| [`SHA256SUMS.txt`](https://github.com/howard-shi55/google-tasks-desktop/releases/download/v0.1.8/SHA256SUMS.txt)                                           | Checksums for the three downloads                          |
 
-- **Top level:** Show / Restore, Hide, Center, Start at login, and Quit.
-- **Edit:** Undo, Redo, Cut, Copy, Paste, Select All. Select/focus the task input before opening the tray menu; the app restores WebView focus and sends the corresponding native Ctrl shortcut. Shortcuts are not sent if another app is foreground or a modifier key is held. Their result depends on the focused Google editor/selection, as with normal keyboard shortcuts.
-- **Window:** Minimize, Toggle Full Screen.
-- **More:** About, Sign Out. Sign Out opens Google's logout flow without forcibly terminating it.
+The release also includes [LICENSE.txt](https://github.com/howard-shi55/google-tasks-desktop/releases/download/v0.1.8/LICENSE.txt) with the original MIT notice.
 
-Closing the window, including Alt+F4, hides it in the tray. **Quit** exits the app. Window dragging is the only native permission granted to the remote Google Tasks origin; tray and startup actions stay in Rust.
+Quit the previous version from its tray menu before updating. Launch the app and sign in to Google locally. Users do not need Rust, Bun, or Visual Studio to run a downloaded build. Windows binaries are unsigned.
 
-### Browser controls and remembered window bounds
+The standalone executable uses the same per-user WebView profile and settings as the installed app; “portable” means no installation is required, not that all data lives next to the executable.
 
-The native WebView has default browser context menus, DevTools, browser accelerators, and user zoom controls disabled. This covers browser commands such as refresh, print, save, browser navigation, and DevTools shortcuts. Function keys F1-F24 are intercepted inside the WebView, including F5 and F12; **Alt+F4** retains close-to-tray behavior. Text editing and navigation keys such as Ctrl+C/V/X/A/Z, Tab, Enter, and arrow keys remain available. Website-owned dropdowns/menus and the native tray menu continue to work; this does not block Windows-wide shortcuts.
+## Everyday use
 
-Window geometry is stored per user at `HKCU\Software\GoogleTasksDesktop\WindowPlacementV1`. It is saved before hiding/quitting and on focus loss, without writing on every movement/resize pixel. Startup restores the last **normal** window rectangle, rather than restarting minimized, maximized, or fullscreen. Before entering fullscreen, the previous normal bounds are saved. Windows' native placement API adjusts completely offscreen positions after display changes; invalid settings fall back to the default window. Raw native bounds do not promise an identical logical size after a DPI change.
+- **Move:** drag empty space in the **Tasks / My Tasks header strip**. The list dropdown keeps its normal clicks.
+- **Show/restore:** left-click the Google Tasks system-tray icon. Check the hidden-icons overflow if needed.
+- **Hide:** choose **Hide** in the tray menu, or press **Alt+F4**.
+- **Exit:** choose **Quit** in the tray menu. Hiding the window does not exit the app.
+- **Reposition:** choose **Center** in the tray menu, including while on a sign-in page.
+
+There is no Windows taskbar button. Right-click the **tray icon** for these controls:
+
+| Location  | Actions                                            |
+| --------- | -------------------------------------------------- |
+| Top level | Show / Restore, Hide, Center, Start at login, Quit |
+| Edit      | Undo, Redo, Cut, Copy, Paste, Select All           |
+| Window    | Minimize, Toggle Full Screen                       |
+| More      | About, Sign Out                                    |
+
+For tray editing, select/focus the task input first. The app restores WebView focus and sends the corresponding native Ctrl shortcut. Sign Out opens Google's logout flow without forcibly terminating the app.
 
 ### Start at login
 
-Check **Start at login** to launch Google Tasks automatically when your Windows user signs in; uncheck it to stop. It is opt-in and uses only the current user's `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\GoogleTasksDesktop` value, without administrator rights. Opening the app only reads the setting; it does not enable startup. The checkbox is initialized from the saved registration. Failed changes restore the saved state and mark the item as **update failed**.
+Check **Start at login** to launch the app when your Windows user signs in; uncheck it to stop. It is **opt-in**, needs no administrator rights, and is not enabled simply by opening the app. The app opens normally at login.
 
-Enabling startup stores the fully quoted path of the executable currently running, so install the app before enabling it. If using the portable executable, keep it in a fixed location and toggle startup off/on after moving it. The app opens normally at login. Uninstalling removes its startup value; explicit updater-mode reinstalls preserve it. If you choose to uninstall the old app before a manual reinstall, enable startup again afterward.
+Enable it **after installing**, because the registration stores the path of the executable currently running. For a portable copy, toggle it off/on after moving the executable. The checkbox reflects the saved registration; a failed change restores the saved state and marks the item as **update failed**.
 
-The injected style is reapplied after full navigation and covers new elements within the same document. It does not cross iframe or shadow-root boundaries. Because Google controls the remote page, its CSP or markup changes may affect the result. Clearing page background colors can also affect state indicators; keyboard focus and ARIA-selected/checked controls receive explicit white outlines.
+Normal uninstall removes the app's startup entry. Explicit updater-mode reinstalls preserve it; if you uninstall the old version before a manual reinstall, enable startup again afterward.
 
-Run `npm test` to check origin isolation, root/list embed routes, repeat injection, and header dragging (including excluded controls and synthetic mouse events) without a Google account. Run `cargo test --locked --lib` inside `src-tauri` to test the actual Rust navigation guard, IPC-origin ACL matching, startup registration, function-key policy, and saved bounds. Registry tests use isolated temporary subtrees, not the real Run/settings keys; they cover Unicode/quoted startup paths, persistence, idempotent disabling, unrelated-value preservation, negative monitor coordinates, invalid geometry and corrupt settings. The cloud workflow runs these checks before release compilation. These checks do not verify native WebView menus/accelerators, actual placement after restart, sign-in startup execution, or remote CSP.
+### Remembered position and size
 
-After downloading, verify white text/shadow, transparency, the absent title/menu bars, header dragging, dropdown clicks, and every tray action. Verify right-clicking the WebView does not show browser menus and F5/F12/Ctrl+R/Ctrl+P/Ctrl+Shift+I do not trigger browser commands. Move/resize the window, quit, restart, and compare its position/size; repeat while hidden/minimized/fullscreen. Test text editing and Ctrl+C/V/Z, closing/restoring, list/task interactions, sign-out/in, and Quit. For startup, enable the checkbox, restart the app to check persistence, then sign out/in to check launching; disable it afterward if unwanted. These native/visual behaviors require local checking; compilation alone cannot confirm them.
+The app saves its normal window bounds before hiding/quitting, on focus loss, and before entering fullscreen. On restart it restores the normal rectangle, rather than starting minimized, maximized, or fullscreen.
 
-## Demo Screenshot
-<img width="1512" alt="Screen Shot 2023-05-31 at 9 58 13 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/bee79572-7080-4730-aaa0-fb9874b98fba">
+Windows adjusts completely offscreen saved positions after display changes. Invalid settings fall back to the default window. A DPI change can change the apparent logical size; **Center** is available from the tray.
 
-I am a heavy user of Google Tasks. I love the easy integration between all the Google services such as Gmail, Calendar and Keep. The mobile app is also excellent. However, Google forces you to use Google Tasks in this terrible interface:
+### Browser menus and shortcuts
 
-<img width="1624" alt="Screen Shot 2023-06-03 at 6 50 56 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/74de30d7-fb29-46cc-bb9b-7116d5cd9eaa">
+The WebView's default right-click menu, DevTools, browser accelerators and zoom controls are disabled, including browser refresh/print/save/navigation commands. **F1–F24** are intercepted inside the WebView; **Alt+F4** retains close-to-tray behavior.
 
-## Resource Use
+Normal editing/navigation keys such as **Ctrl+C/V/X/A/Z**, Tab, Enter and arrow keys remain available. Google's own dropdowns/menus and the native tray menu still work. This does not intercept Windows-wide shortcuts.
 
-The following comparisons are historical upstream macOS measurements, not benchmarks of this Windows fork.
+### Language and appearance
 
-This is no comparison. An optimized-native M1 Mac app vs Google Chrome? Not fair. To make it more fair, Google Chrome is an unused browser (I use Firefox!). EVEN then, Google Tasks running as a sidebar app in Gmail uses 10x more memory and 6x more CPU than Google Tasks Desktop.
+- Google determines the Tasks interface language using its web/account preferences and WebView language preferences. This fork does not force a language.
+- Tray labels are currently **English**, not automatically translated with Windows.
+- The theme is fixed: white text, a subtle black shadow, and transparent page surfaces. Darker wallpapers provide better contrast.
+- Floating menus, dialogs, listboxes and tooltips retain a dark background for readability.
+- Google sign-in pages are not themed. Transparency does not enable click-through.
 
-### CPU Comparison
+## Implementation notes and limitations
 
-<img width="1072" alt="Screen Shot 2023-06-03 at 6 46 34 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/1267c166-6cec-42a0-a3aa-9f1356a20b6a">
+This app loads `https://tasks.google.com/embed/` and injects the theme only into Google's HTTPS Tasks embed routes, including `/embed/list/<id>`. Styles are reapplied after full navigation and apply to new elements within the same document.
 
-<img width="1072" alt="Screen Shot 2023-06-03 at 6 46 28 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/1a054471-0624-49da-aabb-d3109c3362c8">
+Google controls the page. DOM/CSP changes can affect styling; styles do not cross iframe or shadow-root boundaries. The current draggable header is the **top 80 CSS pixels**, excluding interactive elements; a Google layout change may require adjusting that bound in `src-tauri/src/theme.js`.
 
-### RAM Comparison
+Only native window dragging is granted to the remote Tasks origin. Tray actions, startup registration and placement persistence stay in Rust. The origin-level drag capability accommodates Tauri 2.0's Windows fetch IPC, which supplies an origin without the page path.
 
-<img width="1072" alt="Screen Shot 2023-06-03 at 6 45 45 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/94de9ad1-a0f2-43d0-a0f8-91629ea32d59">
+Per-user settings:
 
-<img width="1072" alt="Screen Shot 2023-06-03 at 6 45 55 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/c21736ae-c410-46c7-92c5-c99f5c531c3d">
+| Setting              | Registry location                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------- |
+| Login startup        | Value `GoogleTasksDesktop` under `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` |
+| Normal window bounds | Value `WindowPlacementV1` under `HKCU\Software\GoogleTasksDesktop`                    |
 
-That's it! The app is a no-nonsense wrapper around Google Tasks, it just works! This implementation meets all my needs and I am satisfied with it. 
-If you find it useful and would want more features, please raise a PR! Issues work too, but I'll be resolving those more slowly.
+The app uses WebView2's normal profile for Google sign-in. Sign-in and task data are handled by Google's web interface, not a replacement service operated by this fork.
+
+## Build and verification
+
+### GitHub Actions
+
+No local native toolchain is needed for a cloud build:
+
+1. Open this fork's **Actions** tab and enable workflows if prompted.
+2. Select **Build Windows** → **Run workflow** → choose the branch.
+3. After success, download **google-tasks-windows-x64** from the run's **Artifacts** section while signed in to GitHub.
+
+The workflow is manual, Windows-only, and uses the committed dependency lockfiles. It runs the JS regression check, Rust check, Clippy and native tests before producing an NSIS installer and executable. Workflow artifacts expire after **14 days**; published Release downloads are separate from these temporary artifacts. The workflow does not automatically publish a Release.
+
+### Local development on Windows
+
+Use Rust's MSVC toolchain, Visual Studio C++ Build Tools with a Windows SDK, Node.js, WebView2, and **Bun 1.1.38** for the checked-in binary `bun.lockb`:
+
+```powershell
+bun install --frozen-lockfile
+bun run tauri dev
+```
+
+Build the installer/executable:
+
+```powershell
+bun run tauri build --bundles nsis -- --locked
+```
+
+Checks:
+
+```powershell
+npm test
+cargo check --manifest-path src-tauri/Cargo.toml --locked
+cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings
+cargo test --manifest-path src-tauri/Cargo.toml --locked --lib
+```
+
+Tests cover embed-route isolation, idempotent theme/drag injection, IPC-origin permissions, function-key policy, startup registration and saved bounds. Registry tests use isolated temporary subtrees, not the real startup/settings entries. Native UI behavior still needs on-machine checks: sign-in, text editing, tray actions, disabled browser commands, move/resize → Quit → restart, and login startup.
+
+## Credits and license
+
+- Original project: [shouryan01/google-tasks-desktop](https://github.com/shouryan01/google-tasks-desktop), by **Shouryan Nikam**.
+- Windows fork and screenshot: [howard-shi55](https://github.com/howard-shi55).
+- Built with [Tauri](https://tauri.app/) and Microsoft Edge WebView2; task content comes from Google Tasks.
+
+Licensed under the **[MIT License](LICENSE)**. The original copyright notice is preserved. Please report issues specific to this Windows fork in [this repository's issue tracker](https://github.com/howard-shi55/google-tasks-desktop/issues).
