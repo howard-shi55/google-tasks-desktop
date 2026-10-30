@@ -3,7 +3,7 @@
   // Recheck after eval scheduling so a navigation race cannot theme the login page.
   if (
     location.origin !== "https://tasks.google.com" ||
-    location.pathname !== "/embed/"
+    !location.pathname.startsWith("/embed/")
   ) {
     return;
   }

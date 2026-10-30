@@ -178,6 +178,13 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// Google navigates from /embed/ to /embed/list/<id>; both are trusted embed routes.
+fn is_tasks_embed_url(url: &tauri::Url) -> bool {
+    url.scheme() == "https"
+        && url.host_str() == Some("tasks.google.com")
+        && url.path().starts_with("/embed/")
+}
+
 // Theme only Tasks; keep native window lifecycle and tray actions outside remote IPC.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -187,9 +194,7 @@ pub fn run() {
             let url = payload.url();
             // Never alter Google sign-in pages or other destinations.
             if matches!(payload.event(), PageLoadEvent::Finished)
-                && url.scheme() == "https"
-                && url.host_str() == Some("tasks.google.com")
-                && url.path() == "/embed/"
+                && is_tasks_embed_url(url)
             {
                 if let Err(error) = webview.eval(include_str!("theme.js")) {
                     eprintln!("Could not inject Google Tasks theme: {error}");
@@ -208,4 +213,58 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::is_tasks_embed_url;
+
+    // Exercise the real outer injection guard, including the observed regression URL.
+    #[test]
+    fn tasks_embed_routes_are_scoped_to_the_exact_https_host() {
+        for address in [
+            "https://tasks.google.com/embed/?authuser=0",
+            "https://tasks.google.com/embed/list/~default",
+            "https://tasks.google.com/embed/list/another-list?authuser=1",
+        ] {
+            assert!(is_tasks_embed_url(&tauri::Url::parse(address).unwrap()));
+        }
+        for address in [
+            "http://tasks.google.com/embed/",
+            "https://tasks.google.com.evil.example/embed/list/~default",
+            "https://accounts.google.com/",
+            "https://tasks.google.com/tasks/",
+            "https://tasks.google.com/embed-evil/",
+        ] {
+            assert!(!is_tasks_embed_url(&tauri::Url::parse(address).unwrap()));
+        }
+    }
+
+    // Windows fetch IPC supplies only the Origin header, not /embed/list/<id>.
+    #[test]
+    fn drag_capability_accepts_the_ipc_origin_but_no_other_host() {
+        let capability: serde_json::Value =
+            serde_json::from_str(include_str!("../capabilities/tasks-drag.json")).unwrap();
+        let patterns: Vec<tauri::utils::acl::RemoteUrlPattern> =
+            serde_json::from_value(capability["remote"]["urls"].clone()).unwrap();
+        for address in [
+            "https://tasks.google.com/",
+            "https://tasks.google.com/embed/list/~default",
+        ] {
+            let url = tauri::Url::parse(address).unwrap();
+            assert!(patterns.iter().any(|pattern| pattern.test(&url)));
+        }
+        for address in [
+            "http://tasks.google.com/",
+            "https://accounts.google.com/",
+            "https://tasks.google.com.evil.example/",
+        ] {
+            let url = tauri::Url::parse(address).unwrap();
+            assert!(!patterns.iter().any(|pattern| pattern.test(&url)));
+        }
+        assert_eq!(
+            capability["permissions"],
+            serde_json::json!(["core:window:allow-start-dragging"])
+        );
+    }
 }

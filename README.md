@@ -4,7 +4,9 @@
 
 This fork targets Windows x64 only.
 
-Current version: **0.1.5**.
+Current version: **0.1.6**.
+
+Version 0.1.6 fixes theme and dragging injection after Google navigates from `/embed/` to `/embed/list/<id>`. Both the native URL guard and injected script accept these embed subroutes while excluding other origins and non-embed pages. It also fixes the drag permission: Tauri 2.0's Windows fetch IPC checks the origin without the page path, so the remote capability matches `https://tasks.google.com` rather than `/embed/*`. Only the start-dragging permission is granted to that origin; the script installs its handler only on embed pages.
 
 ## Build Windows with GitHub Actions
 
@@ -32,11 +34,11 @@ The Google Tasks icon stays in the Windows system tray (possibly in the hidden-i
 - **Edit:** Undo, Redo, Cut, Copy, Paste, Select All. Select/focus the task input before opening the tray menu; the app restores WebView focus and sends the corresponding native Ctrl shortcut. Shortcuts are not sent if another app is foreground or a modifier key is held. Their result depends on the focused Google editor/selection, as with normal keyboard shortcuts.
 - **Window:** Show / Restore, Minimize, Toggle Full Screen, Center, Close to Tray.
 
-Closing the window, including Alt+F4, hides it in the tray. **File > Quit** exits the app. Window dragging is the only native permission granted to the remote Google Tasks embed; tray actions stay in Rust.
+Closing the window, including Alt+F4, hides it in the tray. **File > Quit** exits the app. Window dragging is the only native permission granted to the remote Google Tasks origin; tray actions stay in Rust.
 
 The injected style is reapplied after full navigation and covers new elements within the same document. It does not cross iframe or shadow-root boundaries. Because Google controls the remote page, its CSP or markup changes may affect the result. Clearing page background colors can also affect state indicators; keyboard focus and ARIA-selected/checked controls receive explicit white outlines.
 
-Run `npm test` to check origin isolation, repeat injection, and header dragging (including excluded controls and synthetic mouse events) without a Google account. The cloud workflow runs the same check before compiling. These checks do not verify rendering, native Windows behavior, or remote CSP.
+Run `npm test` to check origin isolation, root/list embed routes, repeat injection, and header dragging (including excluded controls and synthetic mouse events) without a Google account. Run `cargo test --locked --lib` inside `src-tauri` to test the actual Rust navigation guard. The cloud workflow runs both checks before release compilation. These checks do not verify rendering, native Windows behavior, or remote CSP.
 
 After downloading, verify white text/shadow, transparency, the absent title/menu bars, header dragging, dropdown clicks, and every tray action. Test task editing with tray Cut/Copy/Paste/Undo/Redo, closing/restoring, fullscreen, refreshing, switching lists, adding/editing/completing a task, keyboard focus, menus/dialogs, signing out/in, and Quit. Use a dark desktop for white-text contrast. These native/visual behaviors require local checking; compilation alone cannot confirm them.
 

@@ -15,6 +15,8 @@ test("theme is isolated, repeatable and only drags non-interactive header space"
     "http://tasks.google.com/embed/",
     "https://tasks.google.com.evil.example/embed/",
     "https://tasks.google.com/tasks/",
+    "https://tasks.google.com/embed-evil/",
+    "https://tasks.google.com/embedded/",
   ]) {
     runInNewContext(script, {
       location: new URL(address),
@@ -62,8 +64,17 @@ test("theme is isolated, repeatable and only drags non-interactive header space"
   };
   runInNewContext(script, context);
   const original = nodes.get("google-tasks-desktop-theme");
-  original.textContent = "stale rules";
-  runInNewContext(script, context);
+  // Real Tasks navigates into list subroutes; those must pass the inner JS guard too.
+  for (const address of [
+    "https://tasks.google.com/embed/?authuser=0",
+    "https://tasks.google.com/embed/list/~default",
+    "https://tasks.google.com/embed/list/another-list?authuser=1",
+  ]) {
+    context.location = new URL(address);
+    original.textContent = "stale rules";
+    runInNewContext(script, context);
+    assert.match(original.textContent, /background-color: transparent/);
+  }
   assert.equal(nodes.size, 1);
   assert.equal(nodes.get("google-tasks-desktop-theme"), original);
   assert.match(original.textContent, /background-color: transparent/);

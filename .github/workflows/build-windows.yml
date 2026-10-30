@@ -42,6 +42,11 @@ jobs:
         working-directory: src-tauri
         run: cargo clippy --locked -- -D warnings
 
+      # Test the actual Rust navigation guard, not only the injected JavaScript guard.
+      - name: Test Tasks navigation routes
+        working-directory: src-tauri
+        run: cargo test --locked --lib
+
       - name: Build Windows executable and NSIS installer
         run: bun run tauri build --bundles nsis -- --locked
 

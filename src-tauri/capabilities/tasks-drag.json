@@ -1,10 +1,10 @@
 {
   "identifier": "tasks-drag",
-  "description": "Allow only window dragging from the Google Tasks embed page.",
+  "description": "Allow only window dragging from the Tasks origin; Tauri 2.0 fetch IPC sends an origin without the page path.",
   "local": false,
   "windows": ["main"],
   "remote": {
-    "urls": ["https://tasks.google.com/embed/*"]
+    "urls": ["https://tasks.google.com"]
   },
   "permissions": ["core:window:allow-start-dragging"]
 }
