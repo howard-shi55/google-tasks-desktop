@@ -87,7 +87,8 @@ fn send_edit_shortcut(window: &WebviewWindow, letter: u8) -> std::io::Result<()>
 fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     if event.id() == "quit" {
         if let Some(window) = app.get_webview_window("main") {
-            window_state::save(window.as_ref());
+            // In Tauri 2.0, AsRef targets the WebView; placement needs its native host.
+            window_state::save(&window.as_ref().window());
         }
         app.exit(0);
         return;
@@ -98,14 +99,14 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     let result = match event.id().as_ref() {
         "show" => show_main(&window),
         "hide" => {
-            window_state::save(window.as_ref());
+            window_state::save(&window.as_ref().window());
             window.hide()
         }
         "minimize" => window.minimize(),
         "center" => window.center(),
         "fullscreen" => {
             // Preserve normal placement before borderless fullscreen changes native geometry.
-            window_state::save(window.as_ref());
+            window_state::save(&window.as_ref().window());
             window.is_fullscreen().and_then(|full| window.set_fullscreen(!full))
         }
         // Keep the app available while Google completes its sign-out navigation.
@@ -225,7 +226,7 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         })
         .build(app)?;
     // Restore only after tray setup so the hidden-on-create window is always recoverable.
-    window_state::restore(window.as_ref());
+    window_state::restore(&window.as_ref().window());
     window.show()?;
     Ok(())
 }
