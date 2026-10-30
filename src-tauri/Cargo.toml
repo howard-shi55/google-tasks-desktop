@@ -1,6 +1,6 @@
 [package]
 name = "google-tasks-desktop"
-version = "0.1.6"
+version = "0.1.7"
 description = "A Tauri App"
 authors = ["Shouryan Nikam"]
 license = "MIT"
@@ -16,9 +16,10 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 tauri-plugin-shell = "2"
 
-# Reuse the already-locked Windows bindings for native WebView edit shortcuts.
+# Reuse locked Windows bindings for edit shortcuts and per-user startup settings.
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_Foundation", "Win32_UI_Input_KeyboardAndMouse", "Win32_UI_WindowsAndMessaging"] }
+winreg = "=0.52.0"
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

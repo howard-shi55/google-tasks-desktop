@@ -4,7 +4,9 @@
 
 This fork targets Windows x64 only.
 
-Current version: **0.1.6**.
+Current version: **0.1.7**.
+
+Version 0.1.7 promotes common tray actions to the top level and adds an optional **Start at login** checkbox.
 
 Version 0.1.6 fixes theme and dragging injection after Google navigates from `/embed/` to `/embed/list/<id>`. Both the native URL guard and injected script accept these embed subroutes while excluding other origins and non-embed pages. It also fixes the drag permission: Tauri 2.0's Windows fetch IPC checks the origin without the page path, so the remote capability matches `https://tasks.google.com` rather than `/embed/*`. Only the start-dragging permission is granted to that origin; the script installs its handler only on embed pages.
 
@@ -26,21 +28,28 @@ Artifacts expire after 14 days; rerun the workflow to produce another download. 
 
 The window/WebView background is transparent and frameless, without a native title bar, border, or in-window menu bar. After the Google Tasks embed page finishes loading, the app injects fixed white text with a subtle black shadow and transparent page surfaces. Menus, dialogs, listboxes, and tooltips keep a dark background for readability. Google sign-in pages are not themed. Transparency does not enable click-through.
 
-Drag empty space in the **Tasks / My Tasks header strip** to move the window. The list dropdown and other interactive controls keep their normal clicks. The current layout uses the top 80 CSS pixels for this strip; if Google changes the header height, adjust the bound in `src-tauri/src/theme.js`. This is independent of the current list's name or language. Google sign-in pages do not get the drag handler; **Window > Center** in the tray menu can reposition the window there.
+Drag empty space in the **Tasks / My Tasks header strip** to move the window. The list dropdown and other interactive controls keep their normal clicks. The current layout uses the top 80 CSS pixels for this strip; if Google changes the header height, adjust the bound in `src-tauri/src/theme.js`. This is independent of the current list's name or language. Google sign-in pages do not get the drag handler; **Center** in the tray menu can reposition the window there.
 
-The Google Tasks icon stays in the Windows system tray (possibly in the hidden-icons overflow). Left-click it to show/restore the window. Right-click it for **File**, **Edit**, and **Window** submenus:
+The Google Tasks icon stays in the Windows system tray (possibly in the hidden-icons overflow). Left-click it to show/restore the window. Right-click it for:
 
-- **File:** About, Hide, Sign Out, Quit. Sign Out opens Google's logout flow without forcibly terminating it.
+- **Top level:** Show / Restore, Hide, Center, Start at login, and Quit.
 - **Edit:** Undo, Redo, Cut, Copy, Paste, Select All. Select/focus the task input before opening the tray menu; the app restores WebView focus and sends the corresponding native Ctrl shortcut. Shortcuts are not sent if another app is foreground or a modifier key is held. Their result depends on the focused Google editor/selection, as with normal keyboard shortcuts.
-- **Window:** Show / Restore, Minimize, Toggle Full Screen, Center, Close to Tray.
+- **Window:** Minimize, Toggle Full Screen.
+- **More:** About, Sign Out. Sign Out opens Google's logout flow without forcibly terminating it.
 
-Closing the window, including Alt+F4, hides it in the tray. **File > Quit** exits the app. Window dragging is the only native permission granted to the remote Google Tasks origin; tray actions stay in Rust.
+Closing the window, including Alt+F4, hides it in the tray. **Quit** exits the app. Window dragging is the only native permission granted to the remote Google Tasks origin; tray and startup actions stay in Rust.
+
+### Start at login
+
+Check **Start at login** to launch Google Tasks automatically when your Windows user signs in; uncheck it to stop. It is opt-in and uses only the current user's `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\GoogleTasksDesktop` value, without administrator rights. Opening the app only reads the setting; it does not enable startup. The checkbox is initialized from the saved registration. Failed changes restore the saved state and mark the item as **update failed**.
+
+Enabling startup stores the fully quoted path of the executable currently running, so install the app before enabling it. If using the portable executable, keep it in a fixed location and toggle startup off/on after moving it. The app opens normally at login. Uninstalling removes its startup value; explicit updater-mode reinstalls preserve it. If you choose to uninstall the old app before a manual reinstall, enable startup again afterward.
 
 The injected style is reapplied after full navigation and covers new elements within the same document. It does not cross iframe or shadow-root boundaries. Because Google controls the remote page, its CSP or markup changes may affect the result. Clearing page background colors can also affect state indicators; keyboard focus and ARIA-selected/checked controls receive explicit white outlines.
 
-Run `npm test` to check origin isolation, root/list embed routes, repeat injection, and header dragging (including excluded controls and synthetic mouse events) without a Google account. Run `cargo test --locked --lib` inside `src-tauri` to test the actual Rust navigation guard. The cloud workflow runs both checks before release compilation. These checks do not verify rendering, native Windows behavior, or remote CSP.
+Run `npm test` to check origin isolation, root/list embed routes, repeat injection, and header dragging (including excluded controls and synthetic mouse events) without a Google account. Run `cargo test --locked --lib` inside `src-tauri` to test the actual Rust navigation guard, IPC-origin ACL matching, and startup registration. The startup test uses an isolated temporary registry subtree, not the user's real Run key; it checks Unicode/space-containing path quoting, persistence, repeated disabling, unrelated-value preservation, and path limits. The cloud workflow runs these checks before release compilation. These checks do not verify rendering, native tray interactions, sign-in startup execution, or remote CSP.
 
-After downloading, verify white text/shadow, transparency, the absent title/menu bars, header dragging, dropdown clicks, and every tray action. Test task editing with tray Cut/Copy/Paste/Undo/Redo, closing/restoring, fullscreen, refreshing, switching lists, adding/editing/completing a task, keyboard focus, menus/dialogs, signing out/in, and Quit. Use a dark desktop for white-text contrast. These native/visual behaviors require local checking; compilation alone cannot confirm them.
+After downloading, verify white text/shadow, transparency, the absent title/menu bars, header dragging, dropdown clicks, and every tray action. Test task editing with tray Cut/Copy/Paste/Undo/Redo, closing/restoring, fullscreen, refreshing, switching lists, adding/editing/completing a task, keyboard focus, menus/dialogs, signing out/in, and Quit. For startup, enable the checkbox, restart the app to check persistence, then sign out/in to check launching; disable it afterward if unwanted. Use a dark desktop for white-text contrast. These native/visual behaviors require local checking; compilation alone cannot confirm them.
 
 ## Demo Screenshot
 <img width="1512" alt="Screen Shot 2023-05-31 at 9 58 13 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/bee79572-7080-4730-aaa0-fb9874b98fba">

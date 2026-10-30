@@ -1,9 +1,12 @@
 use tauri::{
-    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu},
+    menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     webview::PageLoadEvent,
     AppHandle, Manager, WebviewWindow, WindowEvent,
 };
+use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+
+mod autostart;
 
 // Restore both the native window and the WebView's last focused input.
 fn show_main(window: &WebviewWindow) -> tauri::Result<()> {
@@ -89,7 +92,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     };
     let result = match event.id().as_ref() {
         "show" => show_main(&window),
-        "hide" | "close" => window.hide(),
+        "hide" => window.hide(),
         "minimize" => window.minimize(),
         "center" => window.center(),
         "fullscreen" => window
@@ -125,17 +128,41 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     }
 }
 
-// Keep File/Edit/Window accessible without a native title bar or in-window menu bar.
+// A checked item auto-toggles before its event; commit that state or restore reality.
+fn update_autostart(item: &CheckMenuItem) {
+    let root = RegKey::predef(HKEY_CURRENT_USER);
+    let result = (|| -> Result<(), Box<dyn std::error::Error>> {
+        autostart::set_enabled(&root, item.is_checked()?, &std::env::current_exe()?)?;
+        item.set_checked(autostart::is_enabled(&root)?)?;
+        item.set_text("Start at login")?;
+        Ok(())
+    })();
+    if let Err(error) = result {
+        // Do not leave a successful-looking checkmark after a failed registry write.
+        let _ = item.set_checked(autostart::is_enabled(&root).unwrap_or(false));
+        let _ = item.set_text("Start at login (update failed)");
+        eprintln!("Could not update startup setting: {error}");
+    }
+}
+
+// Keep common actions at the top level and advanced actions in compact submenus.
 fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    // Reading startup state must not enable it or prevent the rest of the app from opening.
+    let startup_state = autostart::is_enabled(&RegKey::predef(HKEY_CURRENT_USER));
+    let startup = CheckMenuItem::with_id(
+        app, "autostart", "Start at login", startup_state.is_ok(),
+        startup_state.unwrap_or_else(|error| {
+            eprintln!("Could not read startup setting: {error}");
+            false
+        }), None::<&str>,
+    )?;
     let menu = Menu::with_items(app, &[
-        &Submenu::with_items(app, "File", true, &[
-            &PredefinedMenuItem::about(app, None, Default::default())?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?,
-            &MenuItem::with_id(app, "signOut", "Sign Out", true, None::<&str>)?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?,
-        ])?,
+        &MenuItem::with_id(app, "show", "Show / Restore", true, None::<&str>)?,
+        &MenuItem::with_id(app, "hide", "Hide", true, None::<&str>)?,
+        &MenuItem::with_id(app, "center", "Center", true, None::<&str>)?,
+        &PredefinedMenuItem::separator(app)?,
+        &startup,
+        &PredefinedMenuItem::separator(app)?,
         &Submenu::with_items(app, "Edit", true, &[
             &MenuItem::with_id(app, "undo", "Undo", true, None::<&str>)?,
             &MenuItem::with_id(app, "redo", "Redo", true, None::<&str>)?,
@@ -146,13 +173,15 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             &MenuItem::with_id(app, "selectAll", "Select All", true, None::<&str>)?,
         ])?,
         &Submenu::with_items(app, "Window", true, &[
-            &MenuItem::with_id(app, "show", "Show / Restore", true, None::<&str>)?,
             &MenuItem::with_id(app, "minimize", "Minimize", true, None::<&str>)?,
             &MenuItem::with_id(app, "fullscreen", "Toggle Full Screen", true, None::<&str>)?,
-            &MenuItem::with_id(app, "center", "Center", true, None::<&str>)?,
-            &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "close", "Close to Tray", true, None::<&str>)?,
         ])?,
+        &Submenu::with_items(app, "More", true, &[
+            &PredefinedMenuItem::about(app, None, Default::default())?,
+            &MenuItem::with_id(app, "signOut", "Sign Out", true, None::<&str>)?,
+        ])?,
+        &PredefinedMenuItem::separator(app)?,
+        &MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?,
     ])?;
     let icon = app.default_window_icon().cloned()
         .ok_or_else(|| std::io::Error::other("Application icon is missing"))?;
@@ -161,7 +190,14 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .tooltip("Google Tasks")
         .menu(&menu)
         .menu_on_left_click(false)
-        .on_menu_event(on_menu_event)
+        .on_menu_event(move |app, event| {
+            // Startup stays native-only; the remote page receives no registry permission.
+            if event.id() == "autostart" {
+                update_autostart(&startup);
+            } else {
+                on_menu_event(app, event);
+            }
+        })
         .on_tray_icon_event(|tray, event| {
             // A left click always restores instead of toggling twice on a double-click.
             if matches!(event, TrayIconEvent::Click {
