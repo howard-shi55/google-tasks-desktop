@@ -43,7 +43,7 @@ jobs:
         run: cargo clippy --locked --all-targets -- -D warnings
 
       # Test the actual Rust navigation guard, not only the injected JavaScript guard.
-      - name: Test Tasks navigation routes
+      - name: Test native regressions
         working-directory: src-tauri
         run: cargo test --locked --lib
 

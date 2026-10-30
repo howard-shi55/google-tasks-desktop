@@ -22,7 +22,7 @@
   },
   "productName": "Google Tasks",
   "mainBinaryName": "Google Tasks",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "identifier": "com.shouryannikam.dev",
   "plugins": {},
   "app": {
@@ -30,6 +30,7 @@
     "windows": [
       {
         "fullscreen": false,
+        "visible": false,
         "transparent": true,
         "decorations": false,
         "shadow": false,

@@ -7,6 +7,8 @@ use tauri::{
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 mod autostart;
+mod browser;
+mod window_state;
 
 // Restore both the native window and the WebView's last focused input.
 fn show_main(window: &WebviewWindow) -> tauri::Result<()> {
@@ -84,6 +86,9 @@ fn send_edit_shortcut(window: &WebviewWindow, letter: u8) -> std::io::Result<()>
 // Tray-owned predefined actions target a hidden HWND, so route actions to main explicitly.
 fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     if event.id() == "quit" {
+        if let Some(window) = app.get_webview_window("main") {
+            window_state::save(window.as_ref());
+        }
         app.exit(0);
         return;
     }
@@ -92,12 +97,17 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
     };
     let result = match event.id().as_ref() {
         "show" => show_main(&window),
-        "hide" => window.hide(),
+        "hide" => {
+            window_state::save(window.as_ref());
+            window.hide()
+        }
         "minimize" => window.minimize(),
         "center" => window.center(),
-        "fullscreen" => window
-            .is_fullscreen()
-            .and_then(|full| window.set_fullscreen(!full)),
+        "fullscreen" => {
+            // Preserve normal placement before borderless fullscreen changes native geometry.
+            window_state::save(window.as_ref());
+            window.is_fullscreen().and_then(|full| window.set_fullscreen(!full))
+        }
         // Keep the app available while Google completes its sign-out navigation.
         "signOut" => show_main(&window).and_then(|()| {
             window.eval("window.location.href = 'https://mail.google.com/mail/logout?hl=en';")
@@ -147,6 +157,9 @@ fn update_autostart(item: &CheckMenuItem<tauri::Wry>) {
 
 // Keep common actions at the top level and advanced actions in compact submenus.
 fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let window = app.get_webview_window("main")
+        .ok_or_else(|| std::io::Error::other("Main window is missing"))?;
+    browser::configure(&window)?;
     // Reading startup state must not enable it or prevent the rest of the app from opening.
     let startup_state = autostart::is_enabled(&RegKey::predef(HKEY_CURRENT_USER));
     let startup = CheckMenuItem::with_id(
@@ -211,6 +224,9 @@ fn setup_tray(app: &mut tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             }
         })
         .build(app)?;
+    // Restore only after tray setup so the hidden-on-create window is always recoverable.
+    window_state::restore(window.as_ref());
+    window.show()?;
     Ok(())
 }
 
@@ -240,10 +256,14 @@ pub fn run() {
         .on_window_event(|window, event| {
             // Closing must not strand a frameless app; Quit in the tray exits explicitly.
             if let WindowEvent::CloseRequested { api, .. } = event {
+                window_state::save(window);
                 api.prevent_close();
                 if let Err(error) = window.hide() {
                     eprintln!("Could not hide task window: {error}");
                 }
+            } else if matches!(event, WindowEvent::Focused(false)) {
+                // Save after interaction, not on every pixel of a move/resize operation.
+                window_state::save(window);
             }
         })
         .plugin(tauri_plugin_shell::init())

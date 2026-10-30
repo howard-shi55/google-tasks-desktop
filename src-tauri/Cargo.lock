@@ -1104,13 +1104,14 @@ dependencies = [
 
 [[package]]
 name = "google-tasks-desktop"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-shell",
+ "webview2-com",
  "windows",
  "winreg",
 ]
