@@ -51,7 +51,7 @@ pub fn set_enabled(root: &RegKey, enabled: bool, executable: &Path) -> io::Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use winreg::enums::HKEY_CURRENT_USER;
+    use winreg::enums::{HKEY_CURRENT_USER, KEY_READ};
 
     // Exercise actual registry persistence without touching the real Windows Run key.
     #[test]
@@ -64,7 +64,8 @@ mod tests {
         set_enabled(&root, false, executable).unwrap();
         set_enabled(&root, true, executable).unwrap();
         assert!(is_enabled(&root).unwrap());
-        let key = root.open_subkey(RUN_KEY).unwrap();
+        // This sandbox handle also creates the unrelated value checked below.
+        let key = root.open_subkey_with_flags(RUN_KEY, KEY_READ | KEY_SET_VALUE).unwrap();
         let command: OsString = key.get_value(RUN_VALUE).unwrap();
         assert_eq!(command, OsString::from(r#""C:\Apps\測試 Folder\Google Tasks.exe""#));
         // Preserve unrelated values when toggling our entry off.
