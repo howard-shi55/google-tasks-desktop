@@ -245,8 +245,13 @@ mod tests {
     fn drag_capability_accepts_the_ipc_origin_but_no_other_host() {
         let capability: serde_json::Value =
             serde_json::from_str(include_str!("../capabilities/tasks-drag.json")).unwrap();
-        let patterns: Vec<tauri::utils::acl::RemoteUrlPattern> =
-            serde_json::from_value(capability["remote"]["urls"].clone()).unwrap();
+        // This pinned Tauri type implements FromStr, not Serde deserialization.
+        let patterns: Vec<tauri::utils::acl::RemoteUrlPattern> = capability["remote"]["urls"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|pattern| pattern.as_str().unwrap().parse().unwrap())
+            .collect();
         for address in [
             "https://tasks.google.com/",
             "https://tasks.google.com/embed/list/~default",
