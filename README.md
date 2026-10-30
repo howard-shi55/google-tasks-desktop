@@ -18,7 +18,15 @@ Artifacts expire after 14 days; rerun the workflow to produce another download. 
 
 **Build Windows** is the only build workflow and runs manually, not on push. The upstream multi-platform publishing workflow has been removed.
 
-The Windows workflow builds the source on the selected branch. It does not itself implement a transparent background. Google sign-in, CSS injection, and desktop transparency must be tested locally after downloading the application.
+## Transparent Windows theme
+
+The window/WebView background is transparent. After the Google Tasks embed page finishes loading, the app injects fixed white text and transparent page surfaces. Menus, dialogs, listboxes, and tooltips keep a dark background for readability. Google sign-in pages are not themed. Native Windows title-bar and application-menu controls retain their system appearance, so you can still move, resize, close, and sign out of the app. Transparency does not enable click-through.
+
+The injected style is reapplied after full navigation and covers new elements within the same document. It does not cross iframe or shadow-root boundaries. Because Google controls the remote page, its CSP or markup changes may affect the result. Clearing page background colors can also affect state indicators; keyboard focus and ARIA-selected/checked controls receive explicit white outlines.
+
+Run `npm test` to check origin isolation and repeat injection without a Google account. The cloud workflow runs the same check before compiling. These checks do not verify rendering or remote CSP.
+
+After downloading, sign in locally and verify that the desktop is visible through the main task surface and that text is white. Test refreshing, switching lists, adding/editing/completing a task, keyboard focus, opening menus/dialogs, and signing out/in. Use a dark desktop for white-text contrast. Visual transparency, Google sign-in, and state indicators require this local check; compilation alone cannot confirm them.
 
 ## Demo Screenshot
 <img width="1512" alt="Screen Shot 2023-05-31 at 9 58 13 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/bee79572-7080-4730-aaa0-fb9874b98fba">

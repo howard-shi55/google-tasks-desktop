@@ -1,9 +1,23 @@
 use std::{thread, time::Duration};
-use tauri::{menu::{Menu, MenuItem, PredefinedMenuItem, Submenu}, Manager};
+use tauri::{menu::{Menu, MenuItem, PredefinedMenuItem, Submenu}, webview::PageLoadEvent, Manager};
 
+// Reapply the remote-page theme after navigation without granting remote IPC access.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .on_page_load(|webview, payload| {
+            let url = payload.url();
+            // Never alter Google sign-in pages or other destinations.
+            if matches!(payload.event(), PageLoadEvent::Finished)
+                && url.scheme() == "https"
+                && url.host_str() == Some("tasks.google.com")
+                && url.path() == "/embed/"
+            {
+                if let Err(error) = webview.eval(include_str!("theme.js")) {
+                    eprintln!("Could not inject Google Tasks theme: {error}");
+                }
+            }
+        })
         .menu(|handle| 
             Menu::with_items(
                 handle,
