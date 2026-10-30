@@ -129,7 +129,7 @@ fn on_menu_event(app: &AppHandle, event: MenuEvent) {
 }
 
 // A checked item auto-toggles before its event; commit that state or restore reality.
-fn update_autostart(item: &CheckMenuItem) {
+fn update_autostart(item: &CheckMenuItem<tauri::Wry>) {
     let root = RegKey::predef(HKEY_CURRENT_USER);
     let result = (|| -> Result<(), Box<dyn std::error::Error>> {
         autostart::set_enabled(&root, item.is_checked()?, &std::env::current_exe()?)?;

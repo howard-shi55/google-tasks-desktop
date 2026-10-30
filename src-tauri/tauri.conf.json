@@ -33,6 +33,7 @@
         "transparent": true,
         "decorations": false,
         "shadow": false,
+        "skipTaskbar": true,
         "resizable": true,
         "title": "Google Tasks",
         "width": 800,

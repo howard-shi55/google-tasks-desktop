@@ -6,7 +6,7 @@ This fork targets Windows x64 only.
 
 Current version: **0.1.7**.
 
-Version 0.1.7 promotes common tray actions to the top level and adds an optional **Start at login** checkbox.
+Version 0.1.7 promotes common tray actions to the top level, adds an optional **Start at login** checkbox, and hides the app's Windows taskbar button.
 
 Version 0.1.6 fixes theme and dragging injection after Google navigates from `/embed/` to `/embed/list/<id>`. Both the native URL guard and injected script accept these embed subroutes while excluding other origins and non-embed pages. It also fixes the drag permission: Tauri 2.0's Windows fetch IPC checks the origin without the page path, so the remote capability matches `https://tasks.google.com` rather than `/embed/*`. Only the start-dragging permission is granted to that origin; the script installs its handler only on embed pages.
 
@@ -30,7 +30,7 @@ The window/WebView background is transparent and frameless, without a native tit
 
 Drag empty space in the **Tasks / My Tasks header strip** to move the window. The list dropdown and other interactive controls keep their normal clicks. The current layout uses the top 80 CSS pixels for this strip; if Google changes the header height, adjust the bound in `src-tauri/src/theme.js`. This is independent of the current list's name or language. Google sign-in pages do not get the drag handler; **Center** in the tray menu can reposition the window there.
 
-The Google Tasks icon stays in the Windows system tray (possibly in the hidden-icons overflow). Left-click it to show/restore the window. Right-click it for:
+The app does not show a Windows taskbar button. Its Google Tasks icon stays in the system tray (possibly in the hidden-icons overflow). Left-click it to show/restore the window. Right-click it for:
 
 - **Top level:** Show / Restore, Hide, Center, Start at login, and Quit.
 - **Edit:** Undo, Redo, Cut, Copy, Paste, Select All. Select/focus the task input before opening the tray menu; the app restores WebView focus and sends the corresponding native Ctrl shortcut. Shortcuts are not sent if another app is foreground or a modifier key is held. Their result depends on the focused Google editor/selection, as with normal keyboard shortcuts.
