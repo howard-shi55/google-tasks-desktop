@@ -4,6 +4,8 @@
 
 This fork targets Windows x64 only.
 
+Current version: **0.1.5**.
+
 ## Build Windows with GitHub Actions
 
 You can build this fork without installing Rust, Visual Studio Build Tools, or the Windows SDK on your own computer. The GitHub-hosted Windows runner provides the native build tools, and the workflow installs Rust and Bun.
@@ -20,13 +22,23 @@ Artifacts expire after 14 days; rerun the workflow to produce another download. 
 
 ## Transparent Windows theme
 
-The window/WebView background is transparent. After the Google Tasks embed page finishes loading, the app injects fixed white text and transparent page surfaces. Menus, dialogs, listboxes, and tooltips keep a dark background for readability. Google sign-in pages are not themed. Native Windows title-bar and application-menu controls retain their system appearance, so you can still move, resize, close, and sign out of the app. Transparency does not enable click-through.
+The window/WebView background is transparent and frameless, without a native title bar, border, or in-window menu bar. After the Google Tasks embed page finishes loading, the app injects fixed white text with a subtle black shadow and transparent page surfaces. Menus, dialogs, listboxes, and tooltips keep a dark background for readability. Google sign-in pages are not themed. Transparency does not enable click-through.
+
+Drag empty space in the **Tasks / My Tasks header strip** to move the window. The list dropdown and other interactive controls keep their normal clicks. The current layout uses the top 80 CSS pixels for this strip; if Google changes the header height, adjust the bound in `src-tauri/src/theme.js`. This is independent of the current list's name or language. Google sign-in pages do not get the drag handler; **Window > Center** in the tray menu can reposition the window there.
+
+The Google Tasks icon stays in the Windows system tray (possibly in the hidden-icons overflow). Left-click it to show/restore the window. Right-click it for **File**, **Edit**, and **Window** submenus:
+
+- **File:** About, Hide, Sign Out, Quit. Sign Out opens Google's logout flow without forcibly terminating it.
+- **Edit:** Undo, Redo, Cut, Copy, Paste, Select All. Select/focus the task input before opening the tray menu; the app restores WebView focus and sends the corresponding native Ctrl shortcut. Shortcuts are not sent if another app is foreground or a modifier key is held. Their result depends on the focused Google editor/selection, as with normal keyboard shortcuts.
+- **Window:** Show / Restore, Minimize, Toggle Full Screen, Center, Close to Tray.
+
+Closing the window, including Alt+F4, hides it in the tray. **File > Quit** exits the app. Window dragging is the only native permission granted to the remote Google Tasks embed; tray actions stay in Rust.
 
 The injected style is reapplied after full navigation and covers new elements within the same document. It does not cross iframe or shadow-root boundaries. Because Google controls the remote page, its CSP or markup changes may affect the result. Clearing page background colors can also affect state indicators; keyboard focus and ARIA-selected/checked controls receive explicit white outlines.
 
-Run `npm test` to check origin isolation and repeat injection without a Google account. The cloud workflow runs the same check before compiling. These checks do not verify rendering or remote CSP.
+Run `npm test` to check origin isolation, repeat injection, and header dragging (including excluded controls and synthetic mouse events) without a Google account. The cloud workflow runs the same check before compiling. These checks do not verify rendering, native Windows behavior, or remote CSP.
 
-After downloading, sign in locally and verify that the desktop is visible through the main task surface and that text is white. Test refreshing, switching lists, adding/editing/completing a task, keyboard focus, opening menus/dialogs, and signing out/in. Use a dark desktop for white-text contrast. Visual transparency, Google sign-in, and state indicators require this local check; compilation alone cannot confirm them.
+After downloading, verify white text/shadow, transparency, the absent title/menu bars, header dragging, dropdown clicks, and every tray action. Test task editing with tray Cut/Copy/Paste/Undo/Redo, closing/restoring, fullscreen, refreshing, switching lists, adding/editing/completing a task, keyboard focus, menus/dialogs, signing out/in, and Quit. Use a dark desktop for white-text contrast. These native/visual behaviors require local checking; compilation alone cannot confirm them.
 
 ## Demo Screenshot
 <img width="1512" alt="Screen Shot 2023-05-31 at 9 58 13 PM" src="https://github.com/shouryan01/Google-Tasks-Desktop/assets/32345320/bee79572-7080-4730-aaa0-fb9874b98fba">

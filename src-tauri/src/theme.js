@@ -19,6 +19,7 @@
       background-color: transparent !important;
       color: #ffffff !important;
       caret-color: #ffffff !important;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
     }
     html, body { background-image: none !important; }
     input::placeholder, textarea::placeholder {
@@ -46,5 +47,39 @@
   // A single style node avoids duplicate rules after repeated load callbacks.
   if (!style.isConnected) {
     document.head.appendChild(style);
+  }
+
+  // Install once per document even if the load callback reinjects the theme.
+  if (!document.__desktopDragInstalled) {
+    document.__desktopDragInstalled = true;
+    document.addEventListener("mousedown", async (event) => {
+      // ponytail: the current Tasks/My Tasks header is 80 CSS pixels high;
+      // replace this bound with a confirmed DOM selector if Google changes its layout.
+      if (
+        !event.isTrusted ||
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.ctrlKey ||
+        event.altKey ||
+        event.shiftKey ||
+        event.metaKey ||
+        event.clientY < 0 ||
+        event.clientY >= 80 ||
+        event.target.closest(
+          'button, a, input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="button"], [role="combobox"], [role="menu"], [role="listbox"], [role="dialog"], [role="alertdialog"]',
+        )
+      ) {
+        return;
+      }
+      const api = window.__TAURI__?.window;
+      if (!api) return;
+      // Only the scoped native drag permission is exposed to this remote document.
+      event.preventDefault();
+      try {
+        await api.getCurrentWindow().startDragging();
+      } catch (error) {
+        console.error("Could not drag task window:", error);
+      }
+    });
   }
 })();

@@ -1,0 +1,10 @@
+{
+  "identifier": "tasks-drag",
+  "description": "Allow only window dragging from the Google Tasks embed page.",
+  "local": false,
+  "windows": ["main"],
+  "remote": {
+    "urls": ["https://tasks.google.com/embed/*"]
+  },
+  "permissions": ["core:window:allow-start-dragging"]
+}
